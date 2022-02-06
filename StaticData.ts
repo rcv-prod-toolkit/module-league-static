@@ -5,6 +5,7 @@ import fse from 'fs-extra'
 import path from 'path';
 import tar from 'tar';
 import https from 'https';
+import { SingleBar } from 'cli-progress';
 
 export default class StaticData {
 
@@ -87,29 +88,34 @@ export default class StaticData {
 
     const file = fs.createWriteStream(tarFilePath);
     this.ctx.log.info('start downloading dragontail.tgz')
+    let progress : SingleBar
 
     https.get(tarURI, (response) => {
       response.pipe(file);
   
-      if (response.headers['content-language']) {
-        var len = parseInt(response.headers['content-language'], 10);
+      if (response.headers['content-length']) {
+        var len = parseInt(response.headers['content-length'], 10);
         var cur = 0;
         var total = len / 1048576;
+        progress = this.ctx.progress.create(Math.round(total), 0)
   
         response.on("data", (chunk: any) => {
           cur += chunk.length;
-          this.ctx.log.debug("Downloading " + (100 * cur / len).toFixed(2) + "% " + (cur / 1048576).toFixed(2) + " mb\r" + ".<br/> Total size: " + total.toFixed(2) + " mb");
+          progress.update(Math.round(cur / 1048576))
+/*           this.ctx.log.debug(`Downloading ${(100 * cur / len).toFixed(2)}% ${(cur / 1048576).toFixed(2)} mb\r.<br/> Total size: ${total.toFixed(2)} mb`); */
         });
       }
   
       file.on("finish", () => {
-        this.ctx.log.info('finish downloading dragontail.tgz')
+        this.ctx.log.info('\n finish downloading dragontail.tgz')
         file.close();
-        this.unpackDDragon()
+        progress?.stop();
+        this.unpackDDragon();
       })
-    }).on('error', (err) => { // Handle errors
+    }).on('error', (err) => {
+      progress?.stop(); // Handle errors
       fs.unlink(tarFilePath, () => {
-        this.ctx.log.debug(tarFilePath + 'file unlinked')
+        this.ctx.log.debug(`\n${tarFilePath}file unlinked`)
       });
       this.ctx.log.error(err.message)
     });
