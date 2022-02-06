@@ -97,7 +97,10 @@ export default class StaticData {
         var len = parseInt(response.headers['content-length'], 10);
         var cur = 0;
         var total = len / 1048576;
-        progress = this.ctx.progress.create(Math.round(total), 0)
+
+        if (progress === undefined) {
+          progress = this.ctx.progress.create(Math.round(total), 0, { task : 'downloading DataDragon'})
+        }
   
         response.on("data", (chunk: any) => {
           cur += chunk.length;
