@@ -1,8 +1,8 @@
 {
-  "name": "static-league",
+  "name": "module-league-static",
   "version": "3.0.0",
   "description": "Module that provides static data for League of Legends games",
-  "author": "Himyu",
+  "author": "RCVolus",
   "license": "MIT",
   "toolkit": {
     "modes": [
@@ -15,11 +15,11 @@
   },
   "dependencies": {
     "fs-extra": "^10.0.0",
-    "league-prod-toolkit": "file:../..",
     "node-fetch": "^2.6.1",
     "tar": "^6.1.0"
   },
   "devDependencies": {
+    "rcv-prod-toolkit-types": "^1.0.1",
     "@types/fs-extra": "^9.0.12",
     "@types/node-fetch": "^2.5.12",
     "@types/tar": "^4.0.4",

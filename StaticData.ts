@@ -1,4 +1,4 @@
-import type { PluginContext } from 'league-prod-toolkit/core/modules/Module'
+import type { PluginContext } from 'rcv-prod-toolkit-types'
 import fetch from 'node-fetch';
 import fs from 'fs';
 import fse from 'fs-extra'
