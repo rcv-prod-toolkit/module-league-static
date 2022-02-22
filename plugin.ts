@@ -31,15 +31,6 @@ module.exports = async (ctx: PluginContext) => {
   });
 
   staticData.onReady(() => {
-    ctx.LPTE.emit({
-      meta: {
-        type: 'plugin-status-change',
-        namespace: 'lpt',
-        version: 1
-      },
-      status: 'RUNNING'
-    });
-
     const gameStatic = {
       seasons: require(`../frontend/data/constants/seasons.json`),
       queues: require(`../frontend/data/constants/queues.json`),
@@ -63,6 +54,15 @@ module.exports = async (ctx: PluginContext) => {
         },
         constants: gameStatic
       });
+    });
+
+    ctx.LPTE.emit({
+      meta: {
+        type: 'plugin-status-change',
+        namespace: 'lpt',
+        version: 1
+      },
+      status: 'RUNNING'
     });
   })
 };
