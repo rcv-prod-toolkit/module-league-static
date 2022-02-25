@@ -19,7 +19,7 @@
     "tar": "^6.1.0"
   },
   "devDependencies": {
-    "rcv-prod-toolkit-types": "^1.0.1",
+    "@rcv-prod-toolkit/types": "github:rcv-prod-toolkit/types",
     "@types/fs-extra": "^9.0.12",
     "@types/node-fetch": "^2.5.12",
     "@types/tar": "^4.0.4",

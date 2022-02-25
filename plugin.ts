@@ -1,4 +1,4 @@
-import type { PluginContext } from 'rcv-prod-toolkit-types'
+import type { PluginContext } from '@rcv-prod-toolkit/types'
 import StaticData from './StaticData'
 
 const namespace = 'static-league';
