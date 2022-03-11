@@ -17,9 +17,11 @@ export default class StaticData {
 
   public version : string
 
+  private versionIndex = 0
+
   /**
    * @param ctx Plugin Context
-   * @param version target game version if none given, current version will be used
+   * @param config
    */
   constructor (private ctx: PluginContext, private config: any) {
     this.version = this.config.gameVersion
@@ -60,6 +62,20 @@ export default class StaticData {
     this._setDownloadVersion()
   }
 
+  private _errorReadyCheck () {
+    if (!this.readyHandler) return
+
+    if (!this.config['last-downloaded-version'] || this.config['last-downloaded-version'] === '') {
+      this.ctx.log.warn('The latest patch information could not be downloaded. Trying to get data from an earlier patch')
+      this.versionIndex += 1
+      return this._startUp()
+    }
+
+    this.ctx.log.warn(`The latest patch information could not be downloaded and therefor, data from last patch (${this.config['last-downloaded-version']}) will still be used`)
+
+    this.readyHandler()
+  }
+
   private _setDownloadVersion () {
     if (!this.readyHandler) return
 
@@ -78,13 +94,19 @@ export default class StaticData {
   private async setCurrentVersion () {
     const gvRequest = await fetch("https://ddragon.leagueoflegends.com/api/versions.json")
     const gvJson = await gvRequest.json()
-    return this.version = gvJson[0] as string
+    return this.version = gvJson[this.versionIndex] as string
   }
 
-  private getDDragon () { 
+  private async getDDragon () { 
     const tarFileName = `dragontail-${this.version}.tgz`
     const tarFilePath = path.join(__dirname, '..', 'frontend', tarFileName)
     const tarURI = `https://ddragon.leagueoflegends.com/cdn/${tarFileName}`
+
+    const res = await fetch(tarURI)
+
+    if (!res.ok) {
+      return this._errorReadyCheck()
+    }
 
     const file = fs.createWriteStream(tarFilePath);
     this.ctx.log.info('start downloading dragontail.tgz')
@@ -105,7 +127,6 @@ export default class StaticData {
         response.on("data", (chunk: any) => {
           cur += chunk.length;
           progress.update(Math.round(cur / 1048576))
-/*           this.ctx.log.debug(`Downloading ${(100 * cur / len).toFixed(2)}% ${(cur / 1048576).toFixed(2)} mb\r.<br/> Total size: ${total.toFixed(2)} mb`); */
         });
       }
   
@@ -121,10 +142,22 @@ export default class StaticData {
         this.ctx.log.debug(`\n${tarFilePath}file unlinked`)
       });
       this.ctx.log.error(err.message)
+      this._errorReadyCheck()
     });
   }
 
-  private unpackDDragon () {
+  private async unpackDDragon () {
+    const tarFileName = `dragontail-${this.version}.tgz`
+    const tarFilePath = path.join(__dirname, '..', 'frontend', tarFileName)
+    const stats = await fs.promises.stat(tarFilePath)
+
+    this.ctx.log.warn(JSON.stringify(stats))
+
+    if (stats === undefined || stats.size <= 0) {
+      return this._errorReadyCheck()
+    }
+    
+
     const dDragonPaths = [
       `${this.version}/img/champion`,
       `${this.version}/img/item`,
@@ -137,13 +170,10 @@ export default class StaticData {
       `img/perk-images/Styles`,
     ]
   
-    const tarFileName = `dragontail-${this.version}.tgz`
-    const tarFilePath = path.join(__dirname, '..', 'frontend', tarFileName)
     const dataPath = path.join(__dirname, '..', 'frontend')
 
     this.ctx.log.info('start unpacking dragontail.tgz')
     fs.createReadStream(tarFilePath)
-    .on('error', this.ctx.log.debug)
     .pipe(
       tar.x({ cwd: dataPath, newer: true }, dDragonPaths)
       .on('finish', async () => {
@@ -151,7 +181,15 @@ export default class StaticData {
         await fs.promises.unlink(tarFilePath);
         this.copyDDragonFiles()
       })
+      .on('error', (e) => {
+        this.ctx.log.error(e)
+        this._errorReadyCheck()
+      })
     )
+    .on('error', (e) => {
+      this.ctx.log.error(e)
+      this._errorReadyCheck()
+    })
   }
 
   private async copyDDragonFiles () {
@@ -162,14 +200,15 @@ export default class StaticData {
 
     await fse.copy(versionDirPath, dataPath)
 
-    this.removeVersionDir(versionDirPath)
+    this.removeVersionDir()
     this.getAllCenteredImg()
 
     this.ctx.log.info('finish moving files to frontend')
   }
 
-  private async removeVersionDir (versionDirPath: string) {
+  private async removeVersionDir () {
     this.ctx.log.info('delete versioned folder')
+    const versionDirPath = path.join(__dirname, '..', 'frontend', this.version as string)
     await fs.promises.rmdir(versionDirPath, { recursive: true })
     this._finishedDragonTail = true
     this._readyCheck()
@@ -230,6 +269,12 @@ export default class StaticData {
     const itemBinUri = `https://raw.communitydragon.org/${mainVersion}/game/global/items/items.bin.json`
     const itemBinRes = await fetch(itemBinUri)
     const itemBin = await itemBinRes.json()
+
+    if (!itemBinRes.ok) {
+      this.ctx.log.error('item bin could not be downloaded')
+      return 
+    }
+
     const itemBinPath = path.join(base, 'item.bin.json')
     fs.writeFile(itemBinPath, JSON.stringify(itemBin), (err) => {
       if (err) this.ctx.log.error(err.message);
