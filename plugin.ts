@@ -1,9 +1,9 @@
 import type { PluginContext } from '@rcv-prod-toolkit/types'
 import StaticData from './StaticData'
 
-const namespace = 'static-league';
-
 module.exports = async (ctx: PluginContext) => {
+  const namespace = ctx.plugin.module.getName();
+
   const configRes = await ctx.LPTE.request({
     meta: {
       type: 'request',
@@ -26,7 +26,7 @@ module.exports = async (ctx: PluginContext) => {
     },
     serves: [{
       frontend: 'frontend',
-      id: 'static-league'
+      id: namespace
     }]
   });
 
@@ -70,7 +70,8 @@ module.exports = async (ctx: PluginContext) => {
         namespace,
         type: 'static-loaded',
         version: 1
-      }
+      },
+      constants: gameStatic
     })
   })
 };
