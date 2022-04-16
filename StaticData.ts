@@ -82,7 +82,7 @@ export default class StaticData {
     this.ctx.LPTE.emit({
       meta: {
         type: 'set',
-        namespace: 'config',
+        namespace: 'plugin-config',
         version: 1
       },
       config: {

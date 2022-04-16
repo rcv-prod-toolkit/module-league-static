@@ -7,7 +7,7 @@ module.exports = async (ctx: PluginContext) => {
   const configRes = await ctx.LPTE.request({
     meta: {
       type: 'request',
-      namespace: 'config',
+      namespace: 'plugin-config',
       version: 1
     }
   });
