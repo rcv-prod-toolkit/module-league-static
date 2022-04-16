@@ -209,7 +209,7 @@ export default class StaticData {
   private async removeVersionDir () {
     this.ctx.log.info('delete versioned folder')
     const versionDirPath = path.join(__dirname, '..', 'frontend', this.version as string)
-    await fs.promises.rmdir(versionDirPath, { recursive: true })
+    await fs.promises.rm(versionDirPath, { recursive: true })
     this._finishedDragonTail = true
     this._readyCheck()
     this.ctx.log.info('finish deleting versioned folder')
