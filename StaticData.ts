@@ -151,12 +151,9 @@ export default class StaticData {
     const tarFilePath = path.join(__dirname, '..', 'frontend', tarFileName)
     const stats = await fs.promises.stat(tarFilePath)
 
-    this.ctx.log.warn(JSON.stringify(stats))
-
     if (stats === undefined || stats.size <= 0) {
       return this._errorReadyCheck()
     }
-    
 
     const dDragonPaths = [
       `${this.version}/img/champion`,
