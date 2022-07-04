@@ -10,4 +10,5 @@ frontend/data/*
 frontend/img/*
 !frontend/img/summoner-spell
 !frontend/img/drakes
+!frontend/img/elo
 frontend/*.tgz
