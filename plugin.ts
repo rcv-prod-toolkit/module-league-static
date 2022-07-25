@@ -2,7 +2,7 @@ import type { PluginContext } from '@rcv-prod-toolkit/types'
 import StaticData from './StaticData'
 
 module.exports = async (ctx: PluginContext) => {
-  const namespace = ctx.plugin.module.getName();
+  const namespace = ctx.plugin.module.getName()
 
   const configRes = await ctx.LPTE.request({
     meta: {
@@ -10,11 +10,11 @@ module.exports = async (ctx: PluginContext) => {
       namespace: 'plugin-config',
       version: 1
     }
-  });
+  })
   if (configRes === undefined) {
     return ctx.log.warn(`${namespace} config could not be loaded`)
   }
-  const config = configRes.config;
+  const config = configRes.config
 
   const staticData = new StaticData(ctx, config)
 
@@ -24,11 +24,13 @@ module.exports = async (ctx: PluginContext) => {
       namespace: 'ui',
       version: 1
     },
-    serves: [{
-      frontend: 'frontend',
-      id: namespace
-    }]
-  });
+    serves: [
+      {
+        frontend: 'frontend',
+        id: namespace
+      }
+    ]
+  })
 
   ctx.LPTE.emit({
     meta: {
@@ -37,7 +39,7 @@ module.exports = async (ctx: PluginContext) => {
       version: 1
     },
     status: 'RUNNING'
-  });
+  })
 
   staticData.onReady(() => {
     const gameStatic = {
@@ -47,12 +49,14 @@ module.exports = async (ctx: PluginContext) => {
       gameModes: require(`../frontend/data/constants/gameModes.json`),
       gameTypes: require(`../frontend/data/constants/gameTypes.json`),
       perks: require(`../frontend/data/de_DE/runesReforged.json`),
-      champions: Object.values(require(`../frontend/data/de_DE/champion.json`).data),
+      champions: Object.values(
+        require(`../frontend/data/de_DE/champion.json`).data
+      ),
       items: Object.values(require(`../frontend/data/de_DE/item.json`).data),
       itemBin: Object.values(require(`../frontend/data/item.bin.json`)),
       version: staticData.version
-    };
-  
+    }
+
     ctx.LPTE.on(namespace, 'request-constants', (e: any) => {
       ctx.LPTE.emit({
         meta: {
@@ -62,8 +66,8 @@ module.exports = async (ctx: PluginContext) => {
           reply: e.meta.reply
         },
         constants: gameStatic
-      });
-    });
+      })
+    })
 
     ctx.LPTE.emit({
       meta: {
@@ -74,4 +78,4 @@ module.exports = async (ctx: PluginContext) => {
       constants: gameStatic
     })
   })
-};
+}
