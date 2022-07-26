@@ -341,7 +341,7 @@ export default class StaticData {
       throw new Error(res.statusText)
     }
 
-    return await fs.promises.writeFile(filePath, JSON.stringify(data))
+    return fs.promises.writeFile(filePath, JSON.stringify(data))
   }
 
   async getItemBin() {
@@ -355,7 +355,6 @@ export default class StaticData {
 
     const versionSplit = this.version.split('.')
     const mainVersion = `${versionSplit[0]}.${versionSplit[1]}`
-
     const uri = `https://raw.communitydragon.org/${mainVersion}/game/global/items/items.bin.json`
     const res = await fetch(uri)
     const data = await res.json()
@@ -365,6 +364,6 @@ export default class StaticData {
       throw new Error(res.statusText)
     }
 
-    return await fs.promises.writeFile(filePath, JSON.stringify(data))
+    return fs.promises.writeFile(filePath, JSON.stringify(data))
   }
 }
