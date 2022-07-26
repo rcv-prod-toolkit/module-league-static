@@ -341,7 +341,7 @@ export default class StaticData {
       throw new Error(res.statusText)
     }
 
-    return fs.promises.writeFile(filePath, JSON.stringify(data))
+    return await fs.promises.writeFile(filePath, JSON.stringify(data))
   }
 
   async getItemBin() {
@@ -365,6 +365,6 @@ export default class StaticData {
       throw new Error(res.statusText)
     }
 
-    return fs.promises.writeFile(filePath, JSON.stringify(data))
+    return await fs.promises.writeFile(filePath, JSON.stringify(data))
   }
 }
