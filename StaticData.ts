@@ -361,7 +361,7 @@ export default class StaticData {
     const data = await res.json()
 
     if (!res.ok) {
-      this.ctx.log.error(`${name} could not be downloaded`)
+      this.ctx.log.error('item.bin could not be downloaded')
       throw new Error(res.statusText)
     }
 
