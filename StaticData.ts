@@ -303,11 +303,10 @@ export default class StaticData {
 
   private async getAdditionalFiles() {
     if (!this.version) return
-
     this.ctx.log.info('start downloading additional files')
 
     try {
-      await Promise.all([
+      await Promise.allSettled([
         this.getItemBin(),
         this.getConstants('gameModes'),
         this.getConstants('gameTypes'),
@@ -315,18 +314,23 @@ export default class StaticData {
         this.getConstants('seasons'),
         this.getConstants('maps')
       ])
-
+    } catch (error) {
+      this.ctx.log.error(error)
+    } finally {
       this._finishedAdditionalFileDownloading = true
       this._readyCheck()
       this.ctx.log.info('finish downloading additional files')
-    } catch (error) {
-      this.ctx.log.error(error)
     }
   }
 
   async getConstants(name: string) {
-    const base = path.join(__dirname, '..', 'frontend', 'data')
-    const filePath = path.join(base, 'constants', `${name}.json`)
+    const base = path.join(__dirname, '..', 'frontend', 'data', 'constants')
+
+    if (!fs.existsSync(base)){
+      await fs.promises.mkdir(base);
+    }
+
+    const filePath = path.join(base, `${name}.json`)
 
     const uri = `https://static.developer.riotgames.com/docs/lol/${name}.json`
     const res = await fetch(uri)
@@ -342,6 +346,11 @@ export default class StaticData {
 
   async getItemBin() {
     const base = path.join(__dirname, '..', 'frontend', 'data')
+
+    if (!fs.existsSync(base)){
+      await fs.promises.mkdir(base);
+    }
+
     const filePath = path.join(base, 'item.bin.json')
 
     const versionSplit = this.version.split('.')
