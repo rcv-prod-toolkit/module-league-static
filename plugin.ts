@@ -32,15 +32,6 @@ module.exports = async (ctx: PluginContext) => {
     ]
   })
 
-  ctx.LPTE.emit({
-    meta: {
-      type: 'plugin-status-change',
-      namespace: 'lpt',
-      version: 1
-    },
-    status: 'RUNNING'
-  })
-
   staticData.onReady(() => {
     const gameStatic = {
       seasons: require(`../frontend/data/constants/seasons.json`),
@@ -76,6 +67,15 @@ module.exports = async (ctx: PluginContext) => {
         version: 1
       },
       constants: gameStatic
+    })
+
+    ctx.LPTE.emit({
+      meta: {
+        type: 'plugin-status-change',
+        namespace: 'lpt',
+        version: 1
+      },
+      status: 'RUNNING'
     })
   })
 }

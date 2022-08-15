@@ -5,7 +5,12 @@ import fse from 'fs-extra'
 import path from 'path'
 import tar from 'tar'
 import https from 'https'
-import { SingleBar } from 'cli-progress'
+import { SingleBar, MultiBar } from 'cli-progress'
+
+type IPluginContext = PluginContext & {
+  progress?: MultiBar
+  setProgressBar?: (percent: number, state?: string) => void
+}
 
 export default class StaticData {
   private readyHandler?: () => void
@@ -22,7 +27,7 @@ export default class StaticData {
    * @param ctx Plugin Context
    * @param config
    */
-  constructor(private ctx: PluginContext, private config: any) {
+  constructor(private ctx: IPluginContext, private config: any) {
     this.version = this.config.gameVersion
     this._startUp()
   }
@@ -142,14 +147,22 @@ export default class StaticData {
           var total = len / 1048576
 
           if (progress === undefined) {
-            progress = this.ctx.progress.create(Math.round(total), 0, {
-              task: 'downloading DataDragon'
-            })
+            if (typeof this.ctx.progress?.create === 'function') {
+              progress = this.ctx.progress.create(Math.round(total), 0, {
+                task: 'downloading DataDragon'
+              })
+            } else if (typeof this.ctx.setProgressBar === 'function') {
+              this.ctx.setProgressBar(0, 'Downloading DataDragon')
+            }
           }
 
           response.on('data', (chunk: any) => {
             cur += chunk.length
-            progress.update(Math.round(cur / 1048576))
+            if (progress !== undefined) {
+              progress.update(Math.round(cur / 1048576))
+            } else if (typeof this.ctx.setProgressBar === 'function') {
+              this.ctx.setProgressBar((cur / 1048576) / total, 'Downloading DataDragon')
+            }
           })
         }
 
