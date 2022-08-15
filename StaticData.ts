@@ -280,7 +280,7 @@ export default class StaticData {
       require(`../frontend/data/de_DE/champion.json`).data
     )
 
-    for (const champ of champions) {
+    for await (const champ of champions) {
       const champId = champ.key
       await this._downloadCenteredImg(base, champId)
     }
