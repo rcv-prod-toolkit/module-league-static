@@ -41,8 +41,8 @@ export default class StaticData {
       !this.config['last-downloaded-version'] ||
       this.config['last-downloaded-version'] !== this.version
     ) {
-      this.getDDragon()
       this.getAdditionalFiles()
+      this.getDDragon()
     } else {
       this._finishedCenteredImg = true
       this._finishedAdditionalFileDownloading = true
@@ -319,20 +319,20 @@ export default class StaticData {
     this.ctx.log.info('start downloading additional files')
 
     try {
-      await Promise.allSettled([
-        this.getItemBin(),
-        this.getConstants('gameModes'),
-        this.getConstants('gameTypes'),
-        this.getConstants('queues'),
-        this.getConstants('seasons'),
-        this.getConstants('maps')
+      await Promise.all([
+        await this.getItemBin(),
+        await this.getConstants('gameModes'),
+        await this.getConstants('gameTypes'),
+        await this.getConstants('queues'),
+        await this.getConstants('seasons'),
+        await this.getConstants('maps')
       ])
-    } catch (error) {
-      this.ctx.log.error(error)
-    } finally {
+
       this._finishedAdditionalFileDownloading = true
       this._readyCheck()
       this.ctx.log.info('finish downloading additional files')
+    } catch (error) {
+      this.ctx.log.error(error)
     }
   }
 
