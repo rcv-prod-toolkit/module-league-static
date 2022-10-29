@@ -1,10 +1,11 @@
 import type { PluginContext } from '@rcv-prod-toolkit/types'
 import fetch from 'node-fetch'
-import fs from 'fs'
-import fse from 'fs-extra'
-import path from 'path'
-import tar from 'tar'
-import https from 'https'
+import { createWriteStream, createReadStream, existsSync } from 'fs'
+import { stat, unlink, mkdir, writeFile } from 'fs/promises'
+import { copy } from 'fs-extra'
+import { join } from 'path'
+import { x } from 'tar'
+import { get } from 'https'
 import { SingleBar, MultiBar } from 'cli-progress'
 
 type IPluginContext = PluginContext & {
@@ -118,13 +119,13 @@ export default class StaticData {
     const gvRequest = await fetch(
       'https://ddragon.leagueoflegends.com/api/versions.json'
     )
-    const gvJson = await gvRequest.json()
+    const gvJson = await gvRequest.json() as any
     return (this.version = gvJson[this.versionIndex] as string)
   }
 
   private async getDDragon() {
     const tarFileName = `dragontail-${this.version}.tgz`
-    const tarFilePath = path.join(__dirname, '..', 'frontend', tarFileName)
+    const tarFilePath = join(__dirname, '..', 'frontend', tarFileName)
     const tarURI = `https://ddragon.leagueoflegends.com/cdn/${tarFileName}`
 
     const res = await fetch(tarURI)
@@ -133,60 +134,61 @@ export default class StaticData {
       return this._errorReadyCheck()
     }
 
-    const file = fs.createWriteStream(tarFilePath)
+    const file = createWriteStream(tarFilePath)
     this.ctx.log.info('start downloading dragontail.tgz')
     let progress: SingleBar
 
-    https
-      .get(tarURI, (response) => {
-        response.pipe(file)
+    get(tarURI, (response) => {
+      response.pipe(file)
 
-        if (response.headers['content-length']) {
-          var len = parseInt(response.headers['content-length'], 10)
-          var cur = 0
-          var total = len / 1048576
+      if (response.headers['content-length']) {
+        var len = parseInt(response.headers['content-length'], 10)
+        var cur = 0
+        var total = len / 1048576
 
-          if (progress === undefined) {
-            if (typeof this.ctx.progress?.create === 'function') {
-              progress = this.ctx.progress.create(Math.round(total), 0, {
-                task: 'downloading DataDragon'
-              })
-            } else if (typeof this.ctx.setProgressBar === 'function') {
-              this.ctx.setProgressBar(0, 'Downloading DataDragon')
-            }
+        if (progress === undefined) {
+          if (typeof this.ctx.progress?.create === 'function') {
+            progress = this.ctx.progress.create(Math.round(total), 0, {
+              task: 'downloading DataDragon'
+            })
+          } else if (typeof this.ctx.setProgressBar === 'function') {
+            this.ctx.setProgressBar(0, 'Downloading DataDragon')
           }
-
-          response.on('data', (chunk: any) => {
-            cur += chunk.length
-            if (progress !== undefined) {
-              progress.update(Math.round(cur / 1048576))
-            } else if (typeof this.ctx.setProgressBar === 'function') {
-              this.ctx.setProgressBar((cur / 1048576) / total, 'Downloading DataDragon')
-            }
-          })
         }
 
-        file.on('finish', () => {
-          this.ctx.log.info('\n finish downloading dragontail.tgz')
-          file.close()
-          progress?.stop()
-          this.unpackDDragon()
+        response.on('data', (chunk: any) => {
+          cur += chunk.length
+          if (progress !== undefined) {
+            progress.update(Math.round(cur / 1048576))
+          } else if (typeof this.ctx.setProgressBar === 'function') {
+            this.ctx.setProgressBar((cur / 1048576) / total, 'Downloading DataDragon')
+          }
         })
+      }
+
+      file.on('finish', () => {
+        this.ctx.log.info('\n finish downloading dragontail.tgz')
+        file.close()
+        progress?.stop()
+        this.unpackDDragon()
       })
-      .on('error', (err) => {
+    })
+      .on('error', async (err) => {
         progress?.stop() // Handle errors
-        fs.unlink(tarFilePath, () => {
+        try {
+          await unlink(tarFilePath)
+          this.ctx.log.error(err.message)
+          this._errorReadyCheck()
+        } catch (error: any) {
           this.ctx.log.debug(`\n${tarFilePath}file unlinked`)
-        })
-        this.ctx.log.error(err.message)
-        this._errorReadyCheck()
+        }
       })
   }
 
   private async unpackDDragon() {
     const tarFileName = `dragontail-${this.version}.tgz`
-    const tarFilePath = path.join(__dirname, '..', 'frontend', tarFileName)
-    const stats = await fs.promises.stat(tarFilePath)
+    const tarFilePath = join(__dirname, '..', 'frontend', tarFileName)
+    const stats = await stat(tarFilePath)
 
     if (stats === undefined || stats.size <= 0) {
       return this._errorReadyCheck()
@@ -204,16 +206,15 @@ export default class StaticData {
       `img/perk-images/Styles`
     ]
 
-    const dataPath = path.join(__dirname, '..', 'frontend')
+    const dataPath = join(__dirname, '..', 'frontend')
 
     this.ctx.log.info('start unpacking dragontail.tgz')
-    fs.createReadStream(tarFilePath)
+    createReadStream(tarFilePath)
       .pipe(
-        tar
-          .x({ cwd: dataPath, newer: true }, dDragonPaths)
+        x({ cwd: dataPath, newer: true }, dDragonPaths)
           .on('finish', async () => {
             this.ctx.log.info('finish unpacking dragontail.tgz')
-            await fs.promises.unlink(tarFilePath)
+            await unlink(tarFilePath)
             this.copyDDragonFiles()
           })
           .on('error', (e) => {
@@ -230,15 +231,15 @@ export default class StaticData {
   private async copyDDragonFiles() {
     this.ctx.log.info('moving files to frontend')
 
-    const dataPath = path.join(__dirname, '..', 'frontend')
-    const versionDirPath = path.join(
+    const dataPath = join(__dirname, '..', 'frontend')
+    const versionDirPath = join(
       __dirname,
       '..',
       'frontend',
       this.version as string
     )
 
-    await fse.copy(versionDirPath, dataPath)
+    await copy(versionDirPath, dataPath)
 
     this.removeVersionDir()
     this.getAllCenteredImg()
@@ -248,13 +249,13 @@ export default class StaticData {
 
   private async removeVersionDir() {
     this.ctx.log.info('delete versioned folder')
-    const versionDirPath = path.join(
+    const versionDirPath = join(
       __dirname,
       '..',
       'frontend',
       this.version as string
     )
-    await fs.promises.rm(versionDirPath, { recursive: true })
+    await unlink(versionDirPath)
     this._finishedDragonTail = true
     this._readyCheck()
     this.ctx.log.info('finish deleting versioned folder')
@@ -263,7 +264,7 @@ export default class StaticData {
   private async getAllCenteredImg() {
     this.ctx.log.info('start downloading centered images')
 
-    const base = path.join(
+    const base = join(
       __dirname,
       '..',
       'frontend',
@@ -272,8 +273,8 @@ export default class StaticData {
       'centered'
     )
 
-    if (!fs.existsSync(base)) {
-      await fs.promises.mkdir(base, { recursive: true })
+    if (!existsSync(base)) {
+      await mkdir(base, { recursive: true })
     }
 
     const champions: Array<any> = Object.values(
@@ -291,26 +292,28 @@ export default class StaticData {
   }
 
   private async _downloadCenteredImg(base: string, champId: number) {
-    const dest = path.join(base, champId.toString()) + '.jpg'
+    const dest = join(base, champId.toString()) + '.jpg'
     const url = `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-splashes/${champId}/${champId}000.jpg`
 
-    let file = fs.createWriteStream(dest)
-    https
-      .get(url, (response) => {
-        response.pipe(file)
-        file.on('finish', () => {
-          file.close()
-          this.ctx.log.debug(`downloaded img for ${champId}`)
-          Promise.resolve(true)
-        })
+    let file = createWriteStream(dest)
+    get(url, (response) => {
+      response.pipe(file)
+      file.on('finish', () => {
+        file.close()
+        this.ctx.log.debug(`downloaded img for ${champId}`)
+        Promise.resolve(true)
       })
-      .on('error', (err) => {
-        fs.unlink(dest, () => {
+    })
+      .on('error', async (err) => {
+        try {
+          await unlink(dest)
+          Promise.reject(err)
           this.ctx.log.error(
             `downloaded failed img for ${champId} with: ${err.message}`
           )
-          Promise.reject(err)
-        })
+        } catch (error: any) {
+          this.ctx.log.error(error)
+        }
       })
   }
 
@@ -337,13 +340,13 @@ export default class StaticData {
   }
 
   async getConstants(name: string) {
-    const base = path.join(__dirname, '..', 'frontend', 'data', 'constants')
+    const base = join(__dirname, '..', 'frontend', 'data', 'constants')
 
-    if (!fs.existsSync(base)){
-      await fs.promises.mkdir(base);
+    if (!existsSync(base)) {
+      await mkdir(base);
     }
 
-    const filePath = path.join(base, `${name}.json`)
+    const filePath = join(base, `${name}.json`)
 
     const uri = `https://static.developer.riotgames.com/docs/lol/${name}.json`
     const res = await fetch(uri)
@@ -354,17 +357,17 @@ export default class StaticData {
       throw new Error(res.statusText)
     }
 
-    return fs.promises.writeFile(filePath, JSON.stringify(data))
+    return writeFile(filePath, JSON.stringify(data))
   }
 
   async getItemBin() {
-    const base = path.join(__dirname, '..', 'frontend', 'data')
+    const base = join(__dirname, '..', 'frontend', 'data')
 
-    if (!fs.existsSync(base)){
-      await fs.promises.mkdir(base);
+    if (!existsSync(base)) {
+      await mkdir(base);
     }
 
-    const filePath = path.join(base, 'item.bin.json')
+    const filePath = join(base, 'item.bin.json')
 
     const versionSplit = this.version.split('.')
     const mainVersion = `${versionSplit[0]}.${versionSplit[1]}`
@@ -377,6 +380,6 @@ export default class StaticData {
       throw new Error(res.statusText)
     }
 
-    return fs.promises.writeFile(filePath, JSON.stringify(data))
+    return writeFile(filePath, JSON.stringify(data))
   }
 }
