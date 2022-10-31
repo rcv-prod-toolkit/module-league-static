@@ -36,14 +36,14 @@ module.exports = async (ctx: PluginContext) => {
     const gameStatic = {
       seasons: require(`../frontend/data/constants/seasons.json`),
       queues: require(`../frontend/data/constants/queues.json`),
-      maps: require(`../frontend/data/de_DE/map.json`),
+      maps: require(`../frontend/data/en_US/map.json`),
       gameModes: require(`../frontend/data/constants/gameModes.json`),
       gameTypes: require(`../frontend/data/constants/gameTypes.json`),
-      perks: require(`../frontend/data/de_DE/runesReforged.json`),
+      perks: require(`../frontend/data/en_US/runesReforged.json`),
       champions: Object.values(
-        require(`../frontend/data/de_DE/champion.json`).data
+        require(`../frontend/data/en_US/champion.json`).data
       ),
-      items: Object.values(require(`../frontend/data/de_DE/item.json`).data),
+      items: Object.values(require(`../frontend/data/en_US/item.json`).data),
       itemBin: Object.values(require(`../frontend/data/item.bin.json`)),
       version: staticData.version
     }

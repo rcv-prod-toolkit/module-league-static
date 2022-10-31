@@ -1,8 +1,8 @@
 import type { PluginContext } from '@rcv-prod-toolkit/types'
 import fetch from 'node-fetch'
 import { createWriteStream, createReadStream, existsSync } from 'fs'
-import { stat, unlink, mkdir, writeFile } from 'fs/promises'
-import { copy } from 'fs-extra'
+import { stat, mkdir, writeFile } from 'fs/promises'
+import { copy, remove } from 'fs-extra'
 import { join } from 'path'
 import { x } from 'tar'
 import { get } from 'https'
@@ -176,11 +176,11 @@ export default class StaticData {
       .on('error', async (err) => {
         progress?.stop() // Handle errors
         try {
-          await unlink(tarFilePath)
+          await remove(tarFilePath)
           this.ctx.log.error(err.message)
           this._errorReadyCheck()
         } catch (error: any) {
-          this.ctx.log.debug(`\n${tarFilePath}file unlinked`)
+          this.ctx.log.debug(`\n${tarFilePath}file removed`)
         }
       })
   }
@@ -198,10 +198,10 @@ export default class StaticData {
       `${this.version}/img/champion`,
       `${this.version}/img/item`,
       `${this.version}/img/profileicon`,
-      `${this.version}/data/de_DE/map.json`,
-      `${this.version}/data/de_DE/runesReforged.json`,
-      `${this.version}/data/de_DE/champion.json`,
-      `${this.version}/data/de_DE/item.json`,
+      `${this.version}/data/en_US/map.json`,
+      `${this.version}/data/en_US/runesReforged.json`,
+      `${this.version}/data/en_US/champion.json`,
+      `${this.version}/data/en_US/item.json`,
       `img/champion`,
       `img/perk-images/Styles`
     ]
@@ -214,7 +214,7 @@ export default class StaticData {
         x({ cwd: dataPath, newer: true }, dDragonPaths)
           .on('finish', async () => {
             this.ctx.log.info('finish unpacking dragontail.tgz')
-            await unlink(tarFilePath)
+            await remove(tarFilePath)
             this.copyDDragonFiles()
           })
           .on('error', (e) => {
@@ -255,7 +255,7 @@ export default class StaticData {
       'frontend',
       this.version as string
     )
-    await unlink(versionDirPath)
+    await remove(versionDirPath)
     this._finishedDragonTail = true
     this._readyCheck()
     this.ctx.log.info('finish deleting versioned folder')
@@ -281,10 +281,10 @@ export default class StaticData {
       require(`../frontend/data/de_DE/champion.json`).data
     )
 
-    for await (const champ of champions) {
+    await Promise.all(champions.map( async (champ) => {
       const champId = champ.key
-      await this._downloadCenteredImg(base, champId)
-    }
+      return await this._downloadCenteredImg(base, champId)
+    }))
 
     this._finishedCenteredImg = true
     this._readyCheck()
@@ -306,7 +306,7 @@ export default class StaticData {
     })
       .on('error', async (err) => {
         try {
-          await unlink(dest)
+          await remove(dest)
           Promise.reject(err)
           this.ctx.log.error(
             `downloaded failed img for ${champId} with: ${err.message}`
