@@ -278,7 +278,7 @@ export default class StaticData {
     }
 
     const champions: Array<any> = Object.values(
-      require(`../frontend/data/de_DE/champion.json`).data
+      require(`../frontend/data/en_US/champion.json`).data
     )
 
     await Promise.all(champions.map( async (champ) => {
