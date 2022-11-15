@@ -20,7 +20,7 @@ export default class StaticData {
   private _finishedAdditionalFileDownloading = false
   private _finishedDragonTail = false
 
-  public version: string
+  public version?: string
 
   private versionIndex = 0
 
@@ -29,13 +29,14 @@ export default class StaticData {
    * @param config
    */
   constructor(private ctx: IPluginContext, private config: any) {
-    this.version = this.config.gameVersion
     this._startUp()
   }
 
   private async _startUp() {
-    if (!this.version) {
+    if (!this.config.gameVersion) {
       await this.setCurrentVersion()
+    } else {
+      this.version = this.config.gameVersion
     }
 
     if (
@@ -384,7 +385,7 @@ export default class StaticData {
 
     const filePath = join(base, 'item.bin.json')
 
-    const versionSplit = this.version.split('.')
+    const versionSplit = (this.version as string).split('.')
     const mainVersion = `${versionSplit[0]}.${versionSplit[1]}`
     const uri = `https://raw.communitydragon.org/${mainVersion}/game/global/items/items.bin.json`
     const res = await fetch(uri)
