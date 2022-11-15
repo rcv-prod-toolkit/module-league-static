@@ -119,7 +119,7 @@ export default class StaticData {
     const gvRequest = await fetch(
       'https://ddragon.leagueoflegends.com/api/versions.json'
     )
-    const gvJson = await gvRequest.json() as any
+    const gvJson = (await gvRequest.json()) as any
     return (this.version = gvJson[this.versionIndex] as string)
   }
 
@@ -161,7 +161,10 @@ export default class StaticData {
           if (progress !== undefined) {
             progress.update(Math.round(cur / 1048576))
           } else if (typeof this.ctx.setProgressBar === 'function') {
-            this.ctx.setProgressBar((cur / 1048576) / total, 'Downloading DataDragon')
+            this.ctx.setProgressBar(
+              cur / 1048576 / total,
+              'Downloading DataDragon'
+            )
           }
         })
       }
@@ -172,17 +175,16 @@ export default class StaticData {
         progress?.stop()
         this.unpackDDragon()
       })
+    }).on('error', async (err) => {
+      progress?.stop() // Handle errors
+      try {
+        await remove(tarFilePath)
+        this.ctx.log.error(err.message)
+        this._errorReadyCheck()
+      } catch (error: any) {
+        this.ctx.log.debug(`\n${tarFilePath}file removed`)
+      }
     })
-      .on('error', async (err) => {
-        progress?.stop() // Handle errors
-        try {
-          await remove(tarFilePath)
-          this.ctx.log.error(err.message)
-          this._errorReadyCheck()
-        } catch (error: any) {
-          this.ctx.log.debug(`\n${tarFilePath}file removed`)
-        }
-      })
   }
 
   private async unpackDDragon() {
@@ -281,10 +283,12 @@ export default class StaticData {
       require(`../frontend/data/en_US/champion.json`).data
     )
 
-    await Promise.all(champions.map( async (champ) => {
-      const champId = champ.key
-      return await this._downloadCenteredImg(base, champId)
-    }))
+    await Promise.all(
+      champions.map(async (champ) => {
+        const champId = champ.key
+        return await this._downloadCenteredImg(base, champId)
+      })
+    )
 
     this._finishedCenteredImg = true
     this._readyCheck()
@@ -303,18 +307,17 @@ export default class StaticData {
         this.ctx.log.debug(`downloaded img for ${champId}`)
         Promise.resolve(true)
       })
+    }).on('error', async (err) => {
+      try {
+        await remove(dest)
+        Promise.reject(err)
+        this.ctx.log.error(
+          `downloaded failed img for ${champId} with: ${err.message}`
+        )
+      } catch (error: any) {
+        this.ctx.log.error(error)
+      }
     })
-      .on('error', async (err) => {
-        try {
-          await remove(dest)
-          Promise.reject(err)
-          this.ctx.log.error(
-            `downloaded failed img for ${champId} with: ${err.message}`
-          )
-        } catch (error: any) {
-          this.ctx.log.error(error)
-        }
-      })
   }
 
   private async getAdditionalFiles() {
@@ -343,7 +346,7 @@ export default class StaticData {
     const base = join(__dirname, '..', 'frontend', 'data', 'constants')
 
     if (!existsSync(base)) {
-      await mkdir(base);
+      await mkdir(base)
     }
 
     const filePath = join(base, `${name}.json`)
@@ -364,7 +367,7 @@ export default class StaticData {
     const base = join(__dirname, '..', 'frontend', 'data')
 
     if (!existsSync(base)) {
-      await mkdir(base);
+      await mkdir(base)
     }
 
     const filePath = join(base, 'item.bin.json')
