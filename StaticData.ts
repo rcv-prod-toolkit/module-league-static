@@ -99,7 +99,7 @@ export default class StaticData {
     }
 
     this.ctx.log.warn(
-      `The latest patch information could not be downloaded and therefor, data from last patch (${this.config['last-downloaded-version']}) will still be used`
+      `The latest patch information could not be downloaded, data from the previous patch (${this.config['last-downloaded-version']}) will be used`
     )
 
     this.readyHandler()
