@@ -42,8 +42,13 @@ export default class StaticData {
       !this.config['last-downloaded-version'] ||
       this.config['last-downloaded-version'] !== this.version
     ) {
-      this.getAdditionalFiles()
-      this.getDDragon()
+      try {
+        await this.getAdditionalFiles()
+        await this.getDDragon()
+      } catch (error) {
+        this._errorReadyCheck()
+        return
+      }
     } else {
       this._finishedCenteredImg = true
       this._finishedAdditionalFileDownloading = true
@@ -283,12 +288,17 @@ export default class StaticData {
       require(`../frontend/data/en_US/champion.json`).data
     )
 
-    await Promise.all(
-      champions.map(async (champ) => {
-        const champId = champ.key
-        return await this._downloadCenteredImg(base, champId)
-      })
-    )
+    try {
+      await Promise.all(
+        champions.map(async (champ) => {
+          const champId = champ.key
+          return await this._downloadCenteredImg(base, champId)
+        })
+      )
+    } catch (error) {
+      this.ctx.log.error(error)
+      this._errorReadyCheck()
+    }
 
     this._finishedCenteredImg = true
     this._readyCheck()
@@ -305,17 +315,18 @@ export default class StaticData {
       file.on('finish', () => {
         file.close()
         this.ctx.log.debug(`downloaded img for ${champId}`)
-        Promise.resolve(true)
+        return Promise.resolve(true)
       })
     }).on('error', async (err) => {
       try {
         await remove(dest)
-        Promise.reject(err)
         this.ctx.log.error(
           `downloaded failed img for ${champId} with: ${err.message}`
         )
+        return Promise.reject(err)
       } catch (error: any) {
         this.ctx.log.error(error)
+        return Promise.reject(error)
       }
     })
   }
@@ -337,8 +348,9 @@ export default class StaticData {
       this._finishedAdditionalFileDownloading = true
       this._readyCheck()
       this.ctx.log.info('finish downloading additional files')
-    } catch (error) {
-      this.ctx.log.error(error)
+    } catch (error: any) {
+      this.ctx.log.debug(error)
+      throw new Error(error)
     }
   }
 
@@ -356,7 +368,7 @@ export default class StaticData {
     const data = await res.json()
 
     if (!res.ok) {
-      this.ctx.log.error(`${name} could not be downloaded`)
+      this.ctx.log.debug(`${name} could not be downloaded`)
       throw new Error(res.statusText)
     }
 
@@ -379,7 +391,7 @@ export default class StaticData {
     const data = await res.json()
 
     if (!res.ok) {
-      this.ctx.log.error('item.bin could not be downloaded')
+      this.ctx.log.debug('item.bin could not be downloaded')
       throw new Error(res.statusText)
     }
 
