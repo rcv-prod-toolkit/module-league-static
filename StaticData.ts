@@ -107,8 +107,6 @@ export default class StaticData {
   }
 
   private _setDownloadVersion() {
-    if (!this.readyHandler) return
-
     this.ctx.LPTE.emit({
       meta: {
         type: 'set',
