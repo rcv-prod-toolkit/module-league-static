@@ -14,7 +14,7 @@
     "needsBuild": true
   },
   "dependencies": {
-    "fs-extra": "^10.0.0",
+    "fs-extra": "^11.1.0",
     "node-fetch": "^2.6.1",
     "tar": "^6.1.13"
   },
