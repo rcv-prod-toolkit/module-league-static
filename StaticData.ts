@@ -132,12 +132,6 @@ export default class StaticData {
     const tarFilePath = join(__dirname, '..', 'frontend', tarFileName)
     const tarURI = `https://ddragon.leagueoflegends.com/cdn/${tarFileName}`
 
-    const res = await axios.get(tarURI)
-
-    if (res.status !== 200) {
-      return this._errorReadyCheck()
-    }
-
     const file = createWriteStream(tarFilePath)
     this.ctx.log.info('start downloading dragontail.tgz')
     let progress: SingleBar
@@ -385,15 +379,27 @@ export default class StaticData {
 
     const versionSplit = (this.version as string).split('.')
     const mainVersion = `${versionSplit[0]}.${versionSplit[1]}`
-    const uri = `https://raw.communitydragon.org/${mainVersion}/game/global/items/items.bin.json`
-    const res = await axios.get(uri)
-    const data = res.data
+    const url = `https://raw.communitydragon.org/${mainVersion}/game/global/items/items.bin.json`
 
-    if (res.status !== 200) {
-      this.ctx.log.debug('item.bin could not be downloaded')
-      throw new Error(res.statusText)
-    }
-
-    return writeFile(filePath, JSON.stringify(data))
+    let file = createWriteStream(filePath)
+    get(url, (response) => {
+      response.pipe(file)
+      file.on('finish', () => {
+        file.close()
+        this.ctx.log.debug(`downloaded items.bin.json`)
+        return Promise.resolve(true)
+      })
+    }).on('error', async (err) => {
+      try {
+        await remove(filePath)
+        this.ctx.log.error(
+          `downloaded failed for item.bin.json`
+        )
+        return Promise.reject(err)
+      } catch (error: any) {
+        this.ctx.log.error(error)
+        return Promise.reject(error)
+      }
+    })
   }
 }
