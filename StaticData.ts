@@ -1,5 +1,5 @@
 import type { PluginContext } from '@rcv-prod-toolkit/types'
-import fetch from 'node-fetch'
+import axios from 'axios'
 import { createWriteStream, createReadStream, existsSync } from 'fs'
 import { stat, mkdir, writeFile } from 'fs/promises'
 import { copy, remove } from 'fs-extra'
@@ -120,10 +120,10 @@ export default class StaticData {
   }
 
   private async setCurrentVersion() {
-    const gvRequest = await fetch(
+    const gvRequest = await axios.get(
       'https://ddragon.leagueoflegends.com/api/versions.json'
     )
-    const gvJson = (await gvRequest.json()) as any
+    const gvJson = gvRequest.data
     return (this.version = gvJson[this.versionIndex] as string)
   }
 
@@ -132,9 +132,9 @@ export default class StaticData {
     const tarFilePath = join(__dirname, '..', 'frontend', tarFileName)
     const tarURI = `https://ddragon.leagueoflegends.com/cdn/${tarFileName}`
 
-    const res = await fetch(tarURI)
+    const res = await axios.get(tarURI)
 
-    if (!res.ok) {
+    if (res.status !== 200) {
       return this._errorReadyCheck()
     }
 
@@ -363,10 +363,10 @@ export default class StaticData {
     const filePath = join(base, `${name}.json`)
 
     const uri = `https://static.developer.riotgames.com/docs/lol/${name}.json`
-    const res = await fetch(uri)
-    const data = await res.json()
+    const res = await axios.get(uri)
+    const data = res.data
 
-    if (!res.ok) {
+    if (res.status !== 200) {
       this.ctx.log.debug(`${name} could not be downloaded`)
       throw new Error(res.statusText)
     }
@@ -386,10 +386,10 @@ export default class StaticData {
     const versionSplit = (this.version as string).split('.')
     const mainVersion = `${versionSplit[0]}.${versionSplit[1]}`
     const uri = `https://raw.communitydragon.org/${mainVersion}/game/global/items/items.bin.json`
-    const res = await fetch(uri)
-    const data = await res.json()
+    const res = await axios.get(uri)
+    const data = res.data
 
-    if (!res.ok) {
+    if (res.status !== 200) {
       this.ctx.log.debug('item.bin could not be downloaded')
       throw new Error(res.statusText)
     }
