@@ -377,9 +377,7 @@ export default class StaticData {
 
     const filePath = join(base, 'item.bin.json')
 
-    const versionSplit = (this.version as string).split('.')
-    const mainVersion = `${versionSplit[0]}.${versionSplit[1]}`
-    const url = `https://raw.communitydragon.org/${mainVersion}/game/global/items/items.bin.json`
+    const url = `https://raw.communitydragon.org/latest/game/global/items/items.bin.json`
 
     let file = createWriteStream(filePath)
     get(url, (response) => {
