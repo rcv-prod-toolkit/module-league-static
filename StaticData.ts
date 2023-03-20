@@ -1,12 +1,16 @@
 import type { PluginContext } from '@rcv-prod-toolkit/types'
 import axios from 'axios'
+import { finished as streamFinished } from 'stream'
 import { createWriteStream, createReadStream, existsSync } from 'fs'
 import { stat, mkdir, writeFile } from 'fs/promises'
 import { copy, remove } from 'fs-extra'
+import { promisify } from 'util'
 import { join } from 'path'
 import { x } from 'tar'
 import { get } from 'https'
 import { SingleBar, MultiBar } from 'cli-progress'
+
+const finishedWritePromise = promisify(streamFinished)
 
 type IPluginContext = PluginContext & {
   progress?: MultiBar
@@ -208,12 +212,12 @@ export default class StaticData {
 
     const dataPath = join(__dirname, '..', 'frontend')
 
-    this.ctx.log.info('start unpacking dragontail.tgz')
+    this.ctx.log.info('Unpacking dragontail.tgz...')
     createReadStream(tarFilePath)
       .pipe(
         x({ cwd: dataPath, newer: true }, dDragonPaths)
           .on('finish', async () => {
-            this.ctx.log.info('finish unpacking dragontail.tgz')
+            this.ctx.log.info('Finished unpacking dragontail.tgz')
             await remove(tarFilePath)
             this.copyDDragonFiles()
           })
@@ -229,7 +233,7 @@ export default class StaticData {
   }
 
   private async copyDDragonFiles() {
-    this.ctx.log.info('moving files to frontend')
+    this.ctx.log.info('Moving files to frontend...')
 
     const dataPath = join(__dirname, '..', 'frontend')
     const versionDirPath = join(
@@ -244,11 +248,11 @@ export default class StaticData {
     this.removeVersionDir()
     this.getAllCenteredImg()
 
-    this.ctx.log.info('finish moving files to frontend')
+    this.ctx.log.info('Finished moving files to frontend')
   }
 
   private async removeVersionDir() {
-    this.ctx.log.info('delete versioned folder')
+    this.ctx.log.info('Deleting versioned folder...')
     const versionDirPath = join(
       __dirname,
       '..',
@@ -258,11 +262,11 @@ export default class StaticData {
     await remove(versionDirPath)
     this._finishedDragonTail = true
     this._readyCheck()
-    this.ctx.log.info('finish deleting versioned folder')
+    this.ctx.log.info('Finished deleting versioned folder')
   }
 
   private async getAllCenteredImg() {
-    this.ctx.log.info('start downloading centered images')
+    this.ctx.log.info('Start downloading centered images...')
 
     const base = join(
       __dirname,
@@ -282,12 +286,11 @@ export default class StaticData {
     )
 
     try {
-      await Promise.all(
-        champions.map(async (champ) => {
-          const champId = champ.key
-          return await this._downloadCenteredImg(base, champId)
-        })
-      )
+      const centeredImageTasks = champions.map((champ) => {
+        const champId = champ.key
+        return this._downloadCenteredImg(base, champId)
+      })
+      await Promise.all(centeredImageTasks)
     } catch (error) {
       this.ctx.log.error(error)
       this._errorReadyCheck()
@@ -295,7 +298,7 @@ export default class StaticData {
 
     this._finishedCenteredImg = true
     this._readyCheck()
-    this.ctx.log.info('finish downloading centered images')
+    this.ctx.log.info('Finished downloading centered images')
   }
 
   private async _downloadCenteredImg(base: string, champId: number) {
@@ -303,30 +306,41 @@ export default class StaticData {
     const url = `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-splashes/${champId}/${champId}000.jpg`
 
     let file = createWriteStream(dest)
-    get(url, (response) => {
-      response.pipe(file)
-      file.on('finish', () => {
-        file.close()
-        this.ctx.log.debug(`downloaded img for ${champId}`)
-        return Promise.resolve(true)
+
+    let response
+    try {
+      response = await axios({
+        method: 'get',
+        url,
+        responseType: 'stream'
       })
-    }).on('error', async (err) => {
-      try {
-        await remove(dest)
-        this.ctx.log.error(
-          `downloaded failed img for ${champId} with: ${err.message}`
-        )
-        return Promise.reject(err)
-      } catch (error: any) {
-        this.ctx.log.error(error)
-        return Promise.reject(error)
-      }
-    })
+    } catch (error: any) {
+      await remove(dest)
+      this.ctx.log.error(
+        `Downloading centered splash image failed for champId=${champId}: ${error}`
+      )
+      return Promise.reject(error)
+    }
+
+    try {
+      response.data.pipe(file)
+      await finishedWritePromise(file)
+    } catch (error: any) {
+      await remove(dest)
+      this.ctx.log.error(
+        `Writing centered splash image failed for champId=${champId}: ${error}`
+      )
+      return Promise.reject(error)
+    }
+
+    this.ctx.log.debug(
+      `Downloaded centered splash image for champId=${champId}`
+    )
   }
 
   private async getAdditionalFiles() {
     if (!this.version) return
-    this.ctx.log.info('start downloading additional files')
+    this.ctx.log.info('Start downloading additional files...')
 
     try {
       await Promise.all([
@@ -340,7 +354,7 @@ export default class StaticData {
 
       this._finishedAdditionalFileDownloading = true
       this._readyCheck()
-      this.ctx.log.info('finish downloading additional files')
+      this.ctx.log.info('Finished downloading additional files')
     } catch (error: any) {
       this.ctx.log.debug(error)
       throw new Error(error)
@@ -384,15 +398,13 @@ export default class StaticData {
       response.pipe(file)
       file.on('finish', () => {
         file.close()
-        this.ctx.log.debug(`downloaded items.bin.json`)
+        this.ctx.log.debug(`Downloaded items.bin.json`)
         return Promise.resolve(true)
       })
     }).on('error', async (err) => {
       try {
         await remove(filePath)
-        this.ctx.log.error(
-          `downloaded failed for item.bin.json`
-        )
+        this.ctx.log.error(`Downloading item.bin.json failed: ${err}`)
         return Promise.reject(err)
       } catch (error: any) {
         this.ctx.log.error(error)
