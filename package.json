@@ -1,6 +1,6 @@
 {
   "name": "module-league-static",
-  "version": "3.9.7",
+  "version": "3.9.8",
   "description": "Module that provides static data for League of Legends games",
   "author": "RCVolus",
   "license": "MIT",
