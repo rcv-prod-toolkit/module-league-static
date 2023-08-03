@@ -391,7 +391,7 @@ export default class StaticData {
 
     const filePath = join(base, 'item.bin.json')
 
-    const url = `https://raw.communitydragon.org/latest/game/global/items/items.bin.json`
+    const url = `https://raw.communitydragon.org/latest/game/items.cdtb.bin.json`
 
     let file = createWriteStream(filePath)
     get(url, (response) => {
