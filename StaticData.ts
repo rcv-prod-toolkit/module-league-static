@@ -1,16 +1,12 @@
 import type { PluginContext } from '@rcv-prod-toolkit/types'
 import axios from 'axios'
-import { finished as streamFinished } from 'stream'
 import { createWriteStream, createReadStream, existsSync } from 'fs'
 import { stat, mkdir, writeFile } from 'fs/promises'
 import { copy, remove } from 'fs-extra'
-import { promisify } from 'util'
 import { join } from 'path'
 import { x } from 'tar'
 import { get } from 'https'
 import { SingleBar, MultiBar } from 'cli-progress'
-
-const finishedWritePromise = promisify(streamFinished)
 
 type IPluginContext = PluginContext & {
   progress?: MultiBar
@@ -20,7 +16,6 @@ type IPluginContext = PluginContext & {
 export default class StaticData {
   private readyHandler?: () => void
 
-  private _finishedCenteredImg = false
   private _finishedAdditionalFileDownloading = false
   private _finishedDragonTail = false
 
@@ -55,7 +50,6 @@ export default class StaticData {
         return
       }
     } else {
-      this._finishedCenteredImg = true
       this._finishedAdditionalFileDownloading = true
       this._finishedDragonTail = true
 
@@ -66,7 +60,6 @@ export default class StaticData {
   public onReady(handler: () => void): void {
     if (
       this._finishedDragonTail &&
-      this._finishedCenteredImg &&
       this._finishedAdditionalFileDownloading
     ) {
       handler()
@@ -80,7 +73,6 @@ export default class StaticData {
 
     if (
       !this._finishedDragonTail ||
-      !this._finishedCenteredImg ||
       !this._finishedAdditionalFileDownloading
     )
       return
@@ -246,7 +238,6 @@ export default class StaticData {
     await copy(versionDirPath, dataPath)
 
     this.removeVersionDir()
-    this.getAllCenteredImg()
 
     this.ctx.log.info('Finished moving files to frontend')
   }
@@ -263,79 +254,6 @@ export default class StaticData {
     this._finishedDragonTail = true
     this._readyCheck()
     this.ctx.log.info('Finished deleting versioned folder')
-  }
-
-  private async getAllCenteredImg() {
-    this.ctx.log.info('Start downloading centered images...')
-
-    const base = join(
-      __dirname,
-      '..',
-      'frontend',
-      'img',
-      'champion',
-      'centered'
-    )
-
-    if (!existsSync(base)) {
-      await mkdir(base, { recursive: true })
-    }
-
-    const champions: Array<any> = Object.values(
-      require(`../frontend/data/en_US/champion.json`).data
-    )
-
-    try {
-      const centeredImageTasks = champions.map((champ) => {
-        const champId = champ.key
-        return this._downloadCenteredImg(base, champId)
-      })
-      await Promise.all(centeredImageTasks)
-    } catch (error) {
-      this.ctx.log.error(error)
-      this._errorReadyCheck()
-    }
-
-    this._finishedCenteredImg = true
-    this._readyCheck()
-    this.ctx.log.info('Finished downloading centered images')
-  }
-
-  private async _downloadCenteredImg(base: string, champId: number) {
-    const dest = join(base, champId.toString()) + '.jpg'
-    const url = `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-splashes/${champId}/${champId}000.jpg`
-
-    let file = createWriteStream(dest)
-
-    let response
-    try {
-      response = await axios({
-        method: 'get',
-        url,
-        responseType: 'stream'
-      })
-    } catch (error: any) {
-      await remove(dest)
-      this.ctx.log.error(
-        `Downloading centered splash image failed for champId=${champId}: ${error}`
-      )
-      return Promise.reject(error)
-    }
-
-    try {
-      response.data.pipe(file)
-      await finishedWritePromise(file)
-    } catch (error: any) {
-      await remove(dest)
-      this.ctx.log.error(
-        `Writing centered splash image failed for champId=${champId}: ${error}`
-      )
-      return Promise.reject(error)
-    }
-
-    this.ctx.log.debug(
-      `Downloaded centered splash image for champId=${champId}`
-    )
   }
 
   private async getAdditionalFiles() {
