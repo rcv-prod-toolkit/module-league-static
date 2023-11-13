@@ -20,7 +20,7 @@
   },
   "devDependencies": {
     "@rcv-prod-toolkit/types": "github:rcv-prod-toolkit/types",
-    "@types/fs-extra": "^11.0.3",
+    "@types/fs-extra": "^11.0.4",
     "@types/tar": "^6.1.7",
     "typescript": "^5.2.2"
   },
