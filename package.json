@@ -23,7 +23,7 @@
     "@rcv-prod-toolkit/types": "github:rcv-prod-toolkit/types",
     "@types/fs-extra": "^11.0.4",
     "@types/tar": "^6.1.12",
-    "typescript": "^5.4.5"
+    "typescript": "^5.5.2"
   },
   "scripts": {
     "build": "tsc"
