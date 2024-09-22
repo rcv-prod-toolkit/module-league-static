@@ -11,7 +11,7 @@
     "plugin": {
       "main": "dist/plugin.js"
     },
-    "toolkitVersion": ">=1.8",
+    "toolkitVersion": ">=1.10",
     "needsBuild": true
   },
   "dependencies": {

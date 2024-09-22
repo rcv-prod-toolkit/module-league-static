@@ -42,6 +42,22 @@ export default class StaticData {
       !this.config['last-downloaded-version'] ||
       this.config['last-downloaded-version'] !== this.version
     ) {
+      const continueUpdate = await this.ctx.LPTE.prompt({
+        questions: {
+          type: 'confirm',
+          name: 'update',
+          message: `There are new static files available (${this.version})! Do you want to install them?`,
+          default: true
+        }
+      }, 1000 * 10)
+
+      if (!continueUpdate.update) {
+        this._finishedAdditionalFileDownloading = true
+        this._finishedDragonTail = true
+
+        if (this.readyHandler) this.readyHandler()
+      }
+
       try {
         await this.getAdditionalFiles()
         await this.getDDragon()
