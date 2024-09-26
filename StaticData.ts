@@ -38,8 +38,15 @@ export default class StaticData {
       this.version = this.config.gameVersion
     }
 
-    if (
-      !this.config['last-downloaded-version'] ||
+    if (!this.config['last-downloaded-version']) {
+      try {
+        await this.getAdditionalFiles()
+        await this.getDDragon()
+      } catch (error) {
+        this._errorReadyCheck()
+        return
+      }
+    } else if (
       this.config['last-downloaded-version'] !== this.version
     ) {
       const continueUpdate = await this.ctx.LPTE.prompt({
@@ -56,14 +63,14 @@ export default class StaticData {
         this._finishedDragonTail = true
 
         if (this.readyHandler) this.readyHandler()
-      }
-
-      try {
-        await this.getAdditionalFiles()
-        await this.getDDragon()
-      } catch (error) {
-        this._errorReadyCheck()
-        return
+      } else {
+        try {
+          await this.getAdditionalFiles()
+          await this.getDDragon()
+        } catch (error) {
+          this._errorReadyCheck()
+          return
+        }
       }
     } else {
       this._finishedAdditionalFileDownloading = true
