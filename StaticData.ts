@@ -1,5 +1,6 @@
 import type { PluginContext } from '@rcv-prod-toolkit/types'
 import axios from 'axios'
+import { Agent } from 'https'
 import { createWriteStream, createReadStream, existsSync } from 'fs'
 import { stat, mkdir, writeFile } from 'fs/promises'
 import { copy, remove } from 'fs-extra'
@@ -312,7 +313,9 @@ export default class StaticData {
     const filePath = join(base, `${name}.json`)
 
     const uri = `https://static.developer.riotgames.com/docs/lol/${name}.json`
-    const res = await axios.get(uri)
+    const res = await axios.get(uri, {
+      httpsAgent: new Agent({ rejectUnauthorized: false })
+    })
     const data = res.data
 
     if (res.status !== 200) {
