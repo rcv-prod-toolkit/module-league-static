@@ -17,7 +17,7 @@
   "dependencies": {
     "axios": "^1.18.0",
     "fs-extra": "^11.3.3",
-    "tar": "^7.4.3"
+    "tar": "^7.5.21"
   },
   "devDependencies": {
     "@rcv-prod-toolkit/types": "github:rcv-prod-toolkit/types",
